@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  backend:
+    build: backend
+    ports:
+      - 0.0.0.0:8000:8000
+    volumes:
+      - ./audio:/audio
+  fronted:
+    build: frontend
+    ports:
+    - 0.0.0.0:8080:8080
+    
