@@ -1,7 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
+from google.genai import types
+from google import genai
 from dotenv import load_dotenv
 import os
 
@@ -9,53 +10,60 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # vagy ["*"] fejlesztéshez
+    allow_origins=["*"],  # fejlesztéshez oké; élesben szűkítsd!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def get_openai_client() -> OpenAI:
+def get_google_client() -> genai.Client:
     load_dotenv()
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise ValueError("❌ OPENAI_API_KEY nem található a .env fájlban.")
-    return OpenAI(api_key=api_key)
+        raise ValueError("❌ GOOGLE_API_KEY is not found in the .env file")
+    return genai.Client(api_key=api_key)
 
-def transcribe_audio(client: OpenAI, file_bytes: bytes, filename: str) -> str:
-    transcript = client.audio.transcriptions.create(
-        model="gpt-4o-transcribe",
-        file=(filename, file_bytes, "audio/mpeg"),
-        language="hu"
+def transcribe_audio(client: genai.Client, file_bytes: bytes, mime_type: str) -> str:
+    """
+    Transcribes Hungarian speech from the given audio bytes using Gemini.
+    """
+    resp = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[
+            "Transcribe the spoken Hungarian audio into written Hungarian text",
+            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+        ],
     )
-    return transcript.text
+    # google-genai SDK: egységesített .text property
+    return resp.text
 
-def correct_transcript(client: OpenAI, raw_text: str) -> str:
-    prompt = f"""Your task is to correct typos and word segmentation errors in the raw text of Hungarian sermon audio transcripts.
-    Do not rephrase or rewrite the text; only fix misspellings or incorrect word splits.
-    Here is the text to process:
-    {raw_text}"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+def _guess_mime_from_filename(filename: str) -> str:
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    return {
+        "mp3": "audio/mp3",
+        "wav": "audio/wav",
+        "m4a": "audio/mp4",   # sok kliens így jelöli
+        "flac": "audio/flac",
+        "webm": "audio/webm",
+        "ogg": "audio/ogg",
+    }.get(ext, "application/octet-stream")
 
 @app.post("/transcribe")
 async def transcribe_endpoint(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(('.mp3', '.flac', '.wav', '.m4a')):
-        raise HTTPException(status_code=400, detail="Nem támogatott formátum. Használj .mp3, .flac, .wav vagy .m4a formátumot.")
+    if not file.filename.lower().endswith((".mp3", ".flac", ".wav", ".m4a", ".webm", ".ogg")):
+        raise HTTPException(
+            status_code=400,
+            detail="Nem támogatott formátum. Használj .mp3, .flac, .wav, .m4a, .webm vagy .ogg fájlt.",
+        )
 
     file_bytes = await file.read()
-    client = get_openai_client()
+    client = get_google_client()
+
+    # MIME meghatározás: először a feltöltött tartalomtípus, különben kiterjesztés alapján
+    mime_type = file.content_type or _guess_mime_from_filename(file.filename)
 
     try:
-        raw_text = transcribe_audio(client, file_bytes, file.filename)
-        corrected_text = correct_transcript(client, raw_text)
-        return JSONResponse(content={
-            "raw_transcript": raw_text,
-            "corrected_transcript": corrected_text
-        })
+        raw_text = transcribe_audio(client, file_bytes, mime_type)
+        return JSONResponse(content={"raw_transcript": raw_text})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

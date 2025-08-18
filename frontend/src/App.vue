@@ -11,9 +11,6 @@
     <div v-if="result" class="mt-6">
       <h2 class="text-xl font-semibold mb-2">Raw Transcript:</h2>
       <p class="whitespace-pre-line bg-gray-100 p-3 rounded">{{ result.raw_transcript }}</p>
-
-      <h2 class="text-xl font-semibold mt-4 mb-2">Corrected Transcript:</h2>
-      <p class="whitespace-pre-line bg-green-100 p-3 rounded">{{ result.corrected_transcript }}</p>
     </div>
 
     <div v-if="error" class="text-red-600 mt-4">
