@@ -1,19 +1,43 @@
 <template>
-  <div class="p-4 max-w-md mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Sermon Transcription</h1>
-    <form @submit.prevent="submitForm" class="space-y-4">
-      <input type="file" @change="handleFile" accept="audio/*" required class="block w-full" />
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Upload and Process</button>
+  <div class="container py-4" style="max-width: 720px;">
+    <h1 class="h3 fw-bold mb-4">Sermon Transcription</h1>
+
+    <form @submit.prevent="submitForm" class="mb-4">
+      <div class="mb-3">
+        <input
+          type="file"
+          class="form-control"
+          @change="handleFile"
+          accept="audio/*"
+          required
+        />
+      </div>
+      <button type="submit" class="btn btn-primary">Upload and Process</button>
     </form>
 
-    <div v-if="loading" class="mt-4 text-gray-500">Processing...</div>
-
-    <div v-if="result" class="mt-6">
-      <h2 class="text-xl font-semibold mb-2">Raw Transcript:</h2>
-      <p class="whitespace-pre-line bg-gray-100 p-3 rounded">{{ result.raw_transcript }}</p>
+    <div v-if="loading" class="mt-3 text-muted d-flex align-items-center gap-2">
+      <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+      <span>Processing...</span>
     </div>
 
-    <div v-if="error" class="text-red-600 mt-4">
+    <div v-if="result" class="mt-4">
+      <h2 class="h5 fw-semibold mb-2">Raw Transcript:</h2>
+      <p class="bg-light p-3 rounded border" style="white-space: pre-line;">
+        {{ result.raw_transcript }}
+      </p>
+
+      <h2 class="h5 fw-semibold mt-4 mb-2">Corrected Transcript:</h2>
+      <p class="p-3 rounded border bg-success-subtle" style="white-space: pre-line;">
+        {{ result.corrected_transcript }}
+      </p>
+
+      <h2 class="h5 fw-semibold mt-4 mb-2">Bible Reference</h2>
+      <p class="p-3 rounded border bg-success-subtle" style="white-space: pre-line;">
+        {{ result.bible_reference }}
+      </p>
+    </div>
+
+    <div v-if="error" class="alert alert-danger mt-4 mb-0" role="alert">
       {{ error }}
     </div>
   </div>
@@ -55,7 +79,6 @@ async function submitForm() {
 </script>
 
 <style scoped>
-body {
-  font-family: sans-serif;
-}
+/* no custom styles needed; Bootstrap handles most UI.
+   we keep white-space handling inline on the <p> elements */
 </style>
