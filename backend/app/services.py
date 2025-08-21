@@ -1,6 +1,7 @@
 from google.genai import types
 from google import genai
-
+import json
+import re
 
 class TranscriptionService:
     def __init__(self, client: genai.Client):
@@ -21,40 +22,67 @@ class TranscriptionService:
                 types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
             ],
         )
+        print(resp.text)
         return resp.text or ""
 
-    def correct_transcript(self, raw_text: str) -> str:
+    def process_text(self, raw_text: str) -> dict:
         """
-        Fix typos and word segmentation issues in Hungarian transcripts,
-        without paraphrasing or rewriting.
+        Takes raw Hungarian transcript text, returns JSON with raw + corrected text and Bible reference.
+
+        Returns a dict:
+          {
+            "raw_transcript": "<string>",
+            "corrected_transcript": "<string>",
+            "bible_reference": "<string or 'Nincs igehely'>"
+          }
         """
         prompt = f"""
-        Your task is to correct typos and word segmentation errors in the raw text of Hungarian sermon audio transcripts.
-        Do not rephrase or rewrite the text; only fix misspellings or incorrect word splits, or add spaces between the words if needed.
+        You are given raw Hungarian sermon transcript text.
 
-        Here is the text to process:
+        Tasks:
+        1) Correct typos and wrong word splits. Do NOT paraphrase or rewrite; keep meaning and style. If it needs add spaces, or correct misspelled letters
+        2) Extract the Bible reference (igehely) if present. Return it in Hungarian format
+        (e.g., "János 3,16" or "Zsoltárok 23,1-4"). If no specific reference appears, use "Nincs igehely".
+
+        Output:
+        Return ONLY a single JSON object with exactly these keys:
+        {{
+        "corrected_transcript": "<string>",
+        "bible_reference": "<string>"
+        }}
+
+        Do not include any explanations or extra fields.
+
+        Text to process:
         {raw_text}
-        """
+        """.strip()
+
         resp = self.client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[prompt],
         )
-        return (resp.text or "").strip()
 
-    def extract_bible_reference(self, transcript: str) -> str:
-        """
-        Extract Bible reference (igehely) from a Hungarian sermon transcript.
-        """
-        prompt = f"""
-        Your task is to extract the Bible reference from the following Hungarian sermon transcript.
-        Return only the reference in Hungarian format (e.g., 'János 3,16' or 'Zsoltárok 23,1-4').
-        If there is no specific reference, reply with: 'Nincs igehely'.
+        raw_out = (resp.text or "").strip()
+        data = self._parse_strict_json(raw_out)
+        if not isinstance(data, dict):
+            raise ValueError("Model did not return a JSON object.")
 
-        Transcript:
-        {transcript}
-        """
-        resp = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[prompt],
-        )
-        return (resp.text or "").strip()
+        # defaults
+        data.setdefault("corrected_transcript", "")
+        data.setdefault("bible_reference", "Nincs igehely")
+
+        # always include original raw_text
+        data["raw_text"] = raw_text
+
+        return data
+
+
+    def _parse_strict_json(self, s: str) -> dict:
+            """
+            Tries to parse JSON even if the model wrapped it in Markdown code fences.
+            """
+            # Strip markdown code fences if present
+            fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", s, flags=re.S)
+            if fence_match:
+                s = fence_match.group(1)
+            return json.loads(s)

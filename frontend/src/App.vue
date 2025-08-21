@@ -4,15 +4,24 @@
 
     <form @submit.prevent="submitForm" class="mb-4">
       <div class="mb-3">
+        <label class="form-label">Upload audio or .txt transcript</label>
         <input
           type="file"
           class="form-control"
           @change="handleFile"
-          accept="audio/*"
+          accept=".txt,audio/*"
           required
         />
+        <div v-if="file" class="form-text mt-1">
+          Detected type:
+          <span class="badge" :class="isText ? 'bg-info' : 'bg-secondary'">
+            {{ isText ? 'Text (.txt) → /transcribe/text' : 'Audio → /transcribe/audio' }}
+          </span>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary">Upload and Process</button>
+      <button type="submit" class="btn btn-primary" :disabled="!file || loading">
+        {{ loading ? 'Processing…' : 'Upload and Process' }}
+      </button>
     </form>
 
     <div v-if="loading" class="mt-3 text-muted d-flex align-items-center gap-2">
@@ -44,16 +53,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import axios from 'axios'
+
+const API_BASE = import.meta.env?.VITE_API_BASE || 'http://localhost:8000'
 
 const file = ref(null)
 const result = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
+const isText = computed(() => {
+  if (!file.value) return false
+  const name = file.value.name?.toLowerCase() || ''
+  const type = file.value.type?.toLowerCase() || ''
+  return type === 'text/plain' || name.endsWith('.txt')
+})
+
 function handleFile(event) {
   file.value = event.target.files[0]
+  result.value = null
+  error.value = null
 }
 
 async function submitForm() {
@@ -65,13 +85,18 @@ async function submitForm() {
   const formData = new FormData()
   formData.append('file', file.value)
 
+  const endpoint = isText.value ? '/transcribe/text' : '/transcribe/audio'
+
   try {
-    const response = await axios.post('http://localhost:8000/transcribe', formData, {
+    const response = await axios.post(`${API_BASE}${endpoint}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     result.value = response.data
   } catch (err) {
-    error.value = err.response?.data?.detail || 'An error occurred during upload.'
+    error.value =
+      err.response?.data?.detail ||
+      err.message ||
+      'An error occurred during upload.'
   } finally {
     loading.value = false
   }
@@ -79,6 +104,5 @@ async function submitForm() {
 </script>
 
 <style scoped>
-/* no custom styles needed; Bootstrap handles most UI.
-   we keep white-space handling inline on the <p> elements */
+/* Bootstrap handles most styling; we keep pre-line on content paragraphs inline */
 </style>
