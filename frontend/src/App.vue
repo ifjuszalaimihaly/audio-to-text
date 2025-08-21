@@ -30,20 +30,42 @@
     </div>
 
     <div v-if="result" class="mt-4">
-      <h2 class="h5 fw-semibold mb-2">Raw Transcript:</h2>
+      <h2 class="h5 fw-semibold mb-2">Raw Transcript</h2>
       <p class="bg-light p-3 rounded border" style="white-space: pre-line;">
-        {{ result.raw_transcript }}
+        {{ result.raw_transcript || result.raw_text }}
       </p>
 
-      <h2 class="h5 fw-semibold mt-4 mb-2">Corrected Transcript:</h2>
+      <h2 class="h5 fw-semibold mt-4 mb-2">Corrected Transcript</h2>
       <p class="p-3 rounded border bg-success-subtle" style="white-space: pre-line;">
-        {{ result.corrected_transcript }}
+        {{ result.corrected_transcript || result.corrected_text }}
       </p>
 
       <h2 class="h5 fw-semibold mt-4 mb-2">Bible Reference</h2>
       <p class="p-3 rounded border bg-success-subtle" style="white-space: pre-line;">
         {{ result.bible_reference }}
       </p>
+
+      <div v-if="result.introduction" class="mt-4">
+        <h2 class="h5 fw-semibold mb-2">Introduction</h2>
+        <p class="p-3 rounded border bg-light" style="white-space: pre-line;">
+          {{ result.introduction }}
+        </p>
+      </div>
+
+
+      <div v-if="result.scripture_reading" class="mt-4">
+        <h2 class="h5 fw-semibold mb-2">Scripture Reading</h2>
+        <p class="p-3 rounded border bg-light" style="white-space: pre-line;">
+          {{ result.scripture_reading }}
+        </p>
+      </div>
+
+      <div v-if="result.body" class="mt-4">
+        <h2 class="h5 fw-semibold mb-2">Sermon Body</h2>
+        <p class="p-3 rounded border bg-light" style="white-space: pre-line;">
+          {{ result.body }}
+        </p>
+      </div>
     </div>
 
     <div v-if="error" class="alert alert-danger mt-4 mb-0" role="alert">
