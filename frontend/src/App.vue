@@ -30,6 +30,28 @@
     </div>
 
     <div v-if="result" class="mt-4">
+      <!-- Occasion & Date -->
+      <div v-if="result.occasion || result.date" class="card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+          <div v-if="result.occasion">
+            <span class="text-muted d-block small">Occasion</span>
+            <span class="fw-semibold">{{ result.occasion }}</span>
+          </div>
+          <div v-if="result.date">
+            <span class="text-muted d-block small">Date</span>
+            <span class="fw-semibold">{{ result.date }}</span>
+          </div>
+          <div v-if="Array.isArray(result.tags) && result.tags.length" class="w-100">
+            <span class="text-muted d-block small mb-1">Tags ({{ result.tags.length }})</span>
+            <div class="d-flex flex-wrap gap-2">
+              <span v-for="(t, i) in result.tags" :key="i" class="badge bg-secondary">
+                {{ t }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <h2 class="h5 fw-semibold mb-2">Raw Transcript</h2>
       <p class="bg-light p-3 rounded border" style="white-space: pre-line;">
         {{ result.raw_transcript || result.raw_text }}
@@ -51,7 +73,6 @@
           {{ result.introduction }}
         </p>
       </div>
-
 
       <div v-if="result.scripture_reading" class="mt-4">
         <h2 class="h5 fw-semibold mb-2">Scripture Reading</h2>
