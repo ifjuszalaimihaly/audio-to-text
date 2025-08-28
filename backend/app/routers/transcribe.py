@@ -1,20 +1,22 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 from fastapi.responses import JSONResponse
-
+from sqlalchemy.orm import Session
 from app.clients import get_google_client
 from app.services import TranscriptionService
 from app.helpers import AUDIO_EXTS, guess_mime_from_filename
+
+from app.database.connection import get_db
 
 router = APIRouter()
 
 # ---------------- TEXT ----------------
 @router.post("/transcribe/text")
-async def transcribe_text_endpoint(file: UploadFile = File(...)):
+async def transcribe_text_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Accepts a .txt file and processes it as sermon transcript text.
     """
     client = get_google_client()
-    service = TranscriptionService(client)
+    service = TranscriptionService(client, db)
 
     try:
         file_bytes = await file.read()
@@ -28,12 +30,12 @@ async def transcribe_text_endpoint(file: UploadFile = File(...)):
 
 # ---------------- AUDIO ----------------
 @router.post("/transcribe/audio")
-async def transcribe_audio_endpoint(file: UploadFile = File(...)):
+async def transcribe_audio_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Accepts audio files (.mp3, .wav, .m4a, .flac, .webm, .ogg) and transcribes them.
     """
     client = get_google_client()
-    service = TranscriptionService(client)
+    service = TranscriptionService(client, db)
 
     if not file.filename.lower().endswith(AUDIO_EXTS):
         raise HTTPException(

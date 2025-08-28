@@ -1,15 +1,18 @@
 from google.genai import types
+from sqlalchemy.orm import Session
+from app.database.models import SermonFile
 from google import genai
 import json
 import re
 
 class TranscriptionService:
-    def __init__(self, client: genai.Client):
+    def __init__(self, client: genai.Client, db: Session):
         """
         Service for handling Hungarian sermon audio transcription, correction,
         and Bible reference extraction with Google GenAI.
         """
         self.client = client
+        self.db = db
 
     def transcribe_audio(self, file_bytes: bytes, mime_type: str) -> str:
         """
@@ -93,6 +96,20 @@ class TranscriptionService:
 
         # always include original raw_text
         data["raw_text"] = raw_text
+        sermon_file = SermonFile(
+            source_type="text",
+            original_filename=None,
+            preacher=None,
+            occasion=data["occasion"],
+            sermon_date=None,
+            bible_ref=data["bible_reference"],
+            tags=None,
+            raw_text=raw_text,
+            corrected_text=data["corrected_transcript"]
+        )
+        print(type(self.db))
+        self.db.add(sermon_file)
+        self.db.commit()
 
         return data
 
