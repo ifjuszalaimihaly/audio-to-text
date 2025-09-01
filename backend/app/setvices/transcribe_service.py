@@ -1,18 +1,15 @@
 from google.genai import types
-from sqlalchemy.orm import Session
-from app.database.models import SermonFile
 from google import genai
 import json
 import re
 
-class TranscriptionService:
-    def __init__(self, client: genai.Client, db: Session):
+class TranscribeService:
+    def __init__(self, client: genai.Client):
         """
         Service for handling Hungarian sermon audio transcription, correction,
         and Bible reference extraction with Google GenAI.
         """
         self.client = client
-        self.db = db
 
     def transcribe_audio(self, file_bytes: bytes, mime_type: str) -> str:
         """
@@ -28,7 +25,7 @@ class TranscriptionService:
         print(resp.text)
         return resp.text or ""
 
-    def process_text(self, raw_text: str) -> dict:
+    def process_text(self, raw_text: str, type: str) -> dict:
         """
         Takes raw Hungarian sermon transcript text, returns structured JSON with corrected text,
         bible reference, sermon parts, occasion, date, and tags.
@@ -49,8 +46,9 @@ class TranscriptionService:
         4) Identify the occasion when the sermon was delivered (e.g. "Vasárnapi istentisztelet",
         "Esküvői szertartás", "Temetés", "Konfirmáció", etc.).
         If not clear, return "Ismeretlen alkalom".
-        5) Extract the date if explicitly mentioned (format: "YYYY. hónap nap." e.g. "2024. június 16.").
-        If no date found, return "Nincs dátum".
+        5) Extract the date if explicitly mentioned.
+        - Return it in ISO format: "YYYY-MM-DD" (e.g. "2024-06-16"), so that it can be directly inserted into an SQLAlchemy Date field.
+        - If no date is found, return null.
         6) Generate exactly 20 descriptive tags (in Hungarian, lowercase, single words or short phrases)
         about the sermon content, separated into a JSON array.
         Examples: ["hit", "szeretet", "megváltás", ...].
@@ -85,31 +83,17 @@ class TranscriptionService:
             raise ValueError("Model did not return a JSON object.")
 
         # defaults
-        data.setdefault("corrected_transcript", "")
-        data.setdefault("bible_reference", "Nincs igehely")
-        data.setdefault("introduction", "")
-        data.setdefault("scripture_reading", "")
-        data.setdefault("body", "")
-        data.setdefault("occasion", "Ismeretlen alkalom")
-        data.setdefault("date", "Nincs dátum")
+        data.setdefault("corrected_transcript", None)
+        data.setdefault("bible_reference", None)
+        data.setdefault("introduction", None)
+        data.setdefault("scripture_reading", None)
+        data.setdefault("body", None)
+        data.setdefault("occasion", None)
+        data.setdefault("date", None)
         data.setdefault("tags", [])
 
         # always include original raw_text
         data["raw_text"] = raw_text
-        sermon_file = SermonFile(
-            source_type="text",
-            original_filename=None,
-            preacher=None,
-            occasion=data["occasion"],
-            sermon_date=None,
-            bible_ref=data["bible_reference"],
-            tags=None,
-            raw_text=raw_text,
-            corrected_text=data["corrected_transcript"]
-        )
-        print(type(self.db))
-        self.db.add(sermon_file)
-        self.db.commit()
 
         return data
 

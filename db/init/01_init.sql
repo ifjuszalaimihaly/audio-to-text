@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS sermon_files (
   tags             JSONB DEFAULT '[]'::jsonb,  -- pl. 20 címke
   raw_text         TEXT,                       -- ha megőrzöd
   corrected_text   TEXT NOT NULL,              -- EBBŐL készül az embedding
+  introduction      TEXT,
+  scripture_reading TEXT,
+  body              TEXT,
   created_at       TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
@@ -24,7 +27,7 @@ CREATE TABLE IF NOT EXISTS sermon_chunks (
   char_start   INTEGER NOT NULL,               -- részlet kezdete (karakter index)
   char_end     INTEGER NOT NULL,               -- részlet vége (karakter index)
   section      TEXT,                           -- opcionális: 'introduction'|'scripture_reading'|'body'
-  text         TEXT NOT NULL,                  -- a chunk szöveg
+  text_value         TEXT NOT NULL,                  -- a chunk szöveg
   embedding    VECTOR(768) NOT NULL            -- dimenziót igazítsd a modelledhez
 );
 

@@ -25,6 +25,9 @@ class SermonFile(Base):
     tags: Mapped[dict | list | None] = mapped_column(JSON, default=list)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     corrected_text: Mapped[str] = mapped_column(Text, nullable=False)
+    introduction: Mapped[str] = mapped_column(Text, nullable=True)
+    scripture_reading: Mapped[str] = mapped_column(Text, nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=datetime.utcnow)
 
     chunks: Mapped[list["SermonChunk"]] = relationship(
@@ -41,7 +44,7 @@ class SermonChunk(Base):
     char_start: Mapped[int] = mapped_column(Integer, nullable=False)
     char_end: Mapped[int] = mapped_column(Integer, nullable=False)
     section: Mapped[str | None] = mapped_column(String, nullable=True)  # 'introduction' | 'scripture_reading' | 'body'
-    text: Mapped[str] = mapped_column(Text, nullable=False)
+    text_value: Mapped[str] = mapped_column(Text, nullable=False)
 
     # vektor mező
     embedding = mapped_column(Vector(EMBED_DIM), nullable=False)
