@@ -63,7 +63,7 @@ async def transcribe_text_endpoint(file: UploadFile = File(...), db: Session = D
             chunk_index = index,
             char_start = chunk["start"],
             char_end = chunk["end"],
-            text_value = data["corrected_transcript"],
+            text_value = chunk["text"],
             embedding = chunk["embedding"]
         )
         db.add(sermon_chunk)
